@@ -1,92 +1,189 @@
-# movie-explorer
+# 🎬 Movie Explorer
 
-A minimal **Next.js App Router** Movie Explorer using **TMDB** (via server-side proxy route handlers) with client-side favorites persisted in LocalStorage.
+A full-stack movie discovery application built with **Next.js 15**, **Tailwind CSS**, and **Turso (libSQL)**. Features secure authentication, cloud-synced favorites, and a mobile-first design.
 
-## Setup
+## 🔗 Hosted App
 
-1. Install deps:
+**[View Live Demo](https://movie-explorer-eight-ruddy.vercel.app)** *(Update this link after deployment)*
 
-```bash
-npm install
+## 🛠️ Setup & Run Instructions
+
+### Prerequisites
+- Node.js 18+ 
+- [TMDB API Key](https://www.themoviedb.org/settings/api)
+- [Turso Database](https://turso.tech) (free tier available)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repo-url>
+   cd movie-explorer
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Variables:**
+   Create a `.env.local` file in the root:
+   ```env
+   # TMDB API
+   TMDB_API_KEY=your_tmdb_api_key
+   TMDB_ACCESS_TOKEN=your_tmdb_access_token
+   TMDB_BASE_URL=https://api.themoviedb.org/3
+
+   # Authentication (generate with: openssl rand -base64 32)
+   NEXTAUTH_SECRET=your_secure_random_string
+   NEXTAUTH_URL=http://localhost:3000
+
+   # Turso Database
+   TURSO_DATABASE_URL=libsql://your-database.turso.io
+   TURSO_AUTH_TOKEN=your_turso_auth_token
+   ```
+
+4. **Database Setup:**
+   Generate the Prisma Client:
+   ```bash
+   npx prisma generate
+   ```
+   
+   Apply the schema to your Turso database:
+   ```bash
+   # Generate SQL from Prisma schema
+   npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > schema.sql
+   
+   # Apply to Turso (replace 'your-db-name' with your actual database name)
+   turso db shell your-db-name < schema.sql
+   ```
+
+5. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Deployment to Vercel
+
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Set the environment variables in Vercel Dashboard
+4. Deploy!
+
+**Important:** Ensure you set all environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, etc.) in your Vercel project settings.
+
+## 💡 Technical Decisions & Tradeoffs
+
+### 1. **API Proxy Pattern**
+- **Decision:** All TMDB API requests are proxied through Next.js Route Handlers (`/api/tmdb/*`)
+- **Why:** Keeps the TMDB API key secure on the server and never exposes it to client-side code
+- **Tradeoff:** Adds a small latency overhead, but security is paramount
+
+### 2. **State Management**
+- **Choice:** Hybrid approach with React Server Components + Client Context
+- **Server:** RSC fetch initial data for better performance and SEO
+- **Client:** `FavoritesContext` manages interactive favorites with optimistic updates
+- **Why:** Combines the best of both worlds—server-side efficiency and client-side interactivity
+- **Tradeoff:** Slightly more complex architecture, but worth it for UX
+
+### 3. **Persistence Choice (Turso + Prisma)**
+- **Decision:** Migrated from local SQLite to **Turso (libSQL)** with **Prisma ORM**
+- **Why:** 
+  - Vercel's serverless environment is ephemeral—local files don't persist across deployments
+  - Turso provides a low-latency, SQLite-compatible database perfect for edge deployments
+  - Prisma offers type-safe database access with excellent DX
+- **Adapter:** Uses `@prisma/adapter-libsql` to bridge Prisma with the native libSQL driver
+- **Tradeoff:** Requires cloud database setup vs. simple local file, but essential for production
+
+### 4. **Authentication**
+- **Choice:** NextAuth v5 with credentials provider and JWT sessions
+- **Why:** Industry-standard auth solution with excellent Next.js integration
+- **Edge Optimization:** Split auth config into:
+  - `auth.config.ts` (lightweight, edge-compatible) for middleware
+  - `auth.ts` (full implementation with bcrypt/Prisma) for API routes
+- **Result:** Reduced middleware bundle from **1MB → 85KB** to stay within Vercel's free tier limits
+
+### 5. **Styling**
+- **Choice:** Tailwind CSS with custom design system
+- **Why:** Rapid development, excellent DX, small bundle size when purged
+- **Design:** Mobile-first with glassmorphism effects and smooth animations
+
+## ⚠️ Known Limitations & Future Improvements
+
+### Current Limitations
+- **Pagination:** Search results limited to first 20 items (TMDB's default page size)
+- **Filtering:** No advanced filters for genre, year, or rating
+- **Caching:** API responses not cached; could benefit from SWR or React Query
+- **Rate Limiting:** Basic implementation; production needs Redis-based solution
+
+### What I'd Improve With More Time
+
+1. **Infinite Scroll / Pagination**
+   - Implement `IntersectionObserver` for seamless loading of more results
+   - Add "Load More" button as fallback
+
+2. **Advanced Search**
+   - Genre, year, rating filters
+   - Multi-select capabilities
+   - URL-based filter state for deep linking
+
+3. **Enhanced UX**
+   - More comprehensive skeleton loaders
+   - Toast notifications for all actions
+   - Undo functionality for "Remove from favorites"
+
+4. **Performance**
+   - Implement request deduplication
+   - Add Redis caching layer for TMDB responses
+   - Image optimization with blur placeholders
+
+5. **Social Features**
+   - Public profile pages
+   - Share favorite lists
+   - Collaborative lists
+
+6. **Accessibility**
+   - Comprehensive ARIA labels
+   - Keyboard navigation improvements
+   - Screen reader testing
+
+## 📁 Project Structure
+
+```
+movie-explorer/
+├── app/                      # Next.js App Router
+│   ├── api/                  # API routes (TMDB proxy, auth, favorites)
+│   ├── favorites/            # Favorites page
+│   ├── login/                # Login page
+│   └── signup/               # Signup page
+├── components/               # React components
+├── context/                  # React Context providers
+├── lib/                      # Utilities and configurations
+│   ├── auth.ts              # NextAuth full config (server-side)
+│   ├── auth.config.ts       # NextAuth lightweight config (edge)
+│   └── prisma.ts            # Prisma client with Turso adapter
+├── prisma/
+│   └── schema.prisma        # Database schema
+└── middleware.ts            # Edge middleware for route protection
 ```
 
-2. Create `.env` (or use `.env.local`) and set:
+## 🧪 Tech Stack
 
-```bash
-TMDB_API_KEY=YOUR_TMDB_KEY
-TMDB_BASE_URL=https://api.themoviedb.org/3
-```
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Database:** Turso (libSQL)
+- **ORM:** Prisma 6 with libSQL adapter
+- **Authentication:** NextAuth v5
+- **Deployment:** Vercel
+- **API:** TMDB (The Movie Database)
 
-Notes:
-- `TMDB_API_KEY` is **server-only** and is only read by Next.js Route Handlers under `app/api`.
-- `TMDB_BASE_URL` is optional; defaults to `https://api.themoviedb.org/3`.
+## 📝 License
 
-3. Run dev server:
+MIT
 
-```bash
-npm run dev
-```
+---
 
-Open http://localhost:3000
-
-## Hosted App
-
-- Hosted link: TODO (add your deployed URL)
-
-## How the TMDB proxy works
-
-The browser calls internal endpoints:
-- `GET /api/tmdb/search?query=...`
-- `GET /api/tmdb/movie/[id]`
-
-Those route handlers run on the server and call TMDB with the API key stored in `process.env.TMDB_API_KEY`. The key is never shipped to the client.
-
-Search uses `cache: 'no-store'` and `export const dynamic = 'force-dynamic'` to keep results fresh.
-
-## State management & persistence
-
-- Favorites are managed via **React Context + `useReducer`** (`FavoritesContext`).
-- Persistence is via **LocalStorage** (`useLocalStorageFavorites`) using a single JSON blob keyed by `movie-explorer:favorites:v1`.
-- Favorites include user metadata: rating (1–5) and an optional note.
-
-## Pages / UX
-
-- `/`:
-  - Search input
-  - Results grid with poster/title/year/short overview
-  - Modal details view with runtime (when available)
-- `/favorites`:
-  - List of favorites
-  - Editable rating + note (persisted immediately)
-
-Empty states:
-- “Type to search”
-- “No results”
-- “No favorites yet”
-
-Errors:
-- A compact error banner appears for API/network failures.
-
-## Decisions / tradeoffs
-
-- Kept UI minimal (Tailwind only) to prioritize correctness.
-- LocalStorage baseline persistence (no DB / auth) for simplicity.
-- TMDB calls are proxied via route handlers to avoid exposing secrets.
-
-## Limitations
-
-- No pagination / infinite scroll.
-- No debounced search (search runs on submit).
-- No optimistic UI for detail fetch.
-
-## Next improvements
-
-- Add pagination and “load more”.
-- Add debounced search + request cancellation.
-- Add better skeleton loading states.
-- Add sorting/filtering and improved accessibility.
-
-## Deploy (Vercel)
-
-- Set `TMDB_API_KEY` in Vercel Project Environment Variables.
-- Deploy as a standard Next.js app.
+Built with ❤️ for movie enthusiasts
