@@ -1,22 +1,9 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
 
-export default auth((req) => {
-  const pathname = req.nextUrl.pathname;
-
-  if (pathname.startsWith('/favorites')) {
-    const isAuthed = Boolean(req.auth);
-    if (!isAuthed) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(url);
-    }
-  }
-
-  return NextResponse.next();
-});
+export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ['/favorites/:path*', '/api/favorites/:path*'],
+  // https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
