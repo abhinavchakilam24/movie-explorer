@@ -4,8 +4,7 @@ A full-stack movie discovery application built with **Next.js 15**, **Tailwind C
 
 ## 🔗 Hosted App
 
-**[View Live Demo](https://movie-explorer-eight-ruddy.vercel.app)** *(Update this link after deployment)*
-
+**[View Live Demo](https://movie-explorer-eight-ruddy.vercel.app)** 
 ## 🛠️ Setup & Run Instructions
 
 ### Prerequisites
